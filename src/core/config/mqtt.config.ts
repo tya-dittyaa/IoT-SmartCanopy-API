@@ -5,5 +5,5 @@ export default registerAs('mqtt', () => ({
   port: parseInt(process.env.MQTT_PORT ?? '1883', 10),
   username: process.env.MQTT_USERNAME ?? 'guest',
   password: process.env.MQTT_PASSWORD ?? 'guest',
-  clientId: `smartcanopy-api-${Math.random().toString(16).slice(3)}`,
+  clientId: `api-client-${Math.random().toString(16).slice(3)}`,
 }));
