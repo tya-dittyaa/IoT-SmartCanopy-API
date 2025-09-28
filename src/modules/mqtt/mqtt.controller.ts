@@ -7,15 +7,16 @@ import {
 } from '@nestjs/microservices';
 import { HeartbeatDto } from './dto/heartbeat.dto';
 import { SensorTelemetryDto } from './dto/sensor-telemetry.dto';
+import { MqttService } from './mqtt.service';
 
 const ALLOWED_DEVICE_IDS = new Set(['raph_device']);
 
 @Controller('mqtt')
 export class MqttController {
-  constructor() {}
+  constructor(private readonly mqttService: MqttService) {}
 
   @MessagePattern('devices/+/heartbeat')
-  handleDeviceHeartbeat(
+  async handleDeviceHeartbeat(
     @Payload() payload: HeartbeatDto,
     @Ctx() context: MqttContext,
   ) {
@@ -33,10 +34,17 @@ export class MqttController {
       rssi: payload.rssi,
       status: 'ONLINE',
     });
+
+    // Save to database
+    try {
+      await this.mqttService.saveHeartbeat(deviceId, payload);
+    } catch (error) {
+      console.error(`Failed to save heartbeat for device ${deviceId}:`, error);
+    }
   }
 
   @MessagePattern('devices/+/telemetry')
-  handleSensorTelemetry(
+  async handleSensorTelemetry(
     @Payload() payload: SensorTelemetryDto,
     @Ctx() context: MqttContext,
   ) {
@@ -55,5 +63,12 @@ export class MqttController {
       servoStatus: payload.servoStatus,
       mode: payload.mode,
     });
+
+    // Save to database
+    try {
+      await this.mqttService.saveTelemetry(deviceId, payload);
+    } catch (error) {
+      console.error(`Failed to save telemetry for device ${deviceId}:`, error);
+    }
   }
 }
