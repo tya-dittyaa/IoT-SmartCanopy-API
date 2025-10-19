@@ -5,7 +5,7 @@ import databaseConfig from './core/config/database.config';
 import { PrismaModule } from './core/modules/prisma/prisma.module';
 import { DevicesModule } from './modules/api/devices/devices.module';
 import { TelemetriesModule } from './modules/api/telemetries/telemetries.module';
-import { DevicesGateway } from './modules/websocket/devices/devices.gateway';
+import { DeviceModule } from './modules/websocket/devices/devices.module';
 
 @Module({
   imports: [
@@ -15,7 +15,7 @@ import { DevicesGateway } from './modules/websocket/devices/devices.gateway';
       load: [appConfig, databaseConfig],
     }),
     PrismaModule,
-    DevicesGateway,
+    DeviceModule,
     TelemetriesModule,
     DevicesModule,
   ],

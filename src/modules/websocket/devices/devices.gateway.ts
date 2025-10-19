@@ -10,7 +10,8 @@ import { PrismaService } from 'src/core/modules/prisma/prisma.service';
 import { SensorTelemetryDto } from './dto/sensor-telemetry.dto';
 import { ISensorTelemetry } from './interfaces/ISensorTelemetry';
 
-@WebSocketGateway(27925, {
+@WebSocketGateway({
+  namespace: '/devices',
   cors: {
     origin: '*',
   },
@@ -31,7 +32,7 @@ export class DevicesGateway {
     return existing.id;
   }
 
-  @SubscribeMessage('devices/telemetry')
+  @SubscribeMessage('telemetry')
   async handleTelemetry(@MessageBody() data: SensorTelemetryDto) {
     const deviceKey = data?.deviceKey;
     const sensorData: ISensorTelemetry | undefined = (data as any)?.sensorData;
