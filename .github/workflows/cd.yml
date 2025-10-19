@@ -1,0 +1,80 @@
+name: CD to VPS (Self-Hosted)
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    environment: production
+    env:
+      SERVICE_NAME: smartcanopy-api
+      PORT: ${{ secrets.PORT }}
+      CORS_ORIGIN: ${{ secrets.CORS_ORIGIN }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Prepare .env File
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Creating .env file..."
+          cat << EOF > .env
+          PORT=${PORT}
+          CORS_ORIGIN=${CORS_ORIGIN}
+          DATABASE_URL=${DATABASE_URL}
+          EOF
+          echo ".env file ready"
+
+      - name: Stop and Remove Old Containers
+        run: |
+          set -euo pipefail
+          echo "Stopping and removing existing containers..."
+          docker compose down --remove-orphans
+
+      - name: Clean Docker Images (Pre-Build)
+        run: |
+          set -euo pipefail
+          echo "Pruning dangling images before build..."
+          docker image prune -f
+
+      - name: Build Services
+        run: |
+          set -euo pipefail
+          echo "Building services with docker compose..."
+          docker compose build
+
+      - name: Start Services
+        run: |
+          set -euo pipefail
+          echo "Starting services in detached mode..."
+          docker compose up -d
+
+      - name: Verify Deployment
+        run: |
+          set -euo pipefail
+          echo "Checking container status for $SERVICE_NAME..."
+          if ! docker ps | grep -q "$SERVICE_NAME"; then
+            echo "Error: No $SERVICE_NAME containers are running."
+            docker ps
+            exit 1
+          fi
+          echo "Service $SERVICE_NAME is running successfully."
+          docker ps
+
+      - name: Clean Docker Images (Post-Deploy)
+        run: |
+          set -euo pipefail
+          echo "Pruning dangling images after deployment..."
+          docker image prune -f
+
+      - name: Deployment Complete
+        run: echo "Deployment process finished."
