@@ -1,0 +1,7 @@
+services:
+  smartcanopy-api:
+    build: .
+    container_name: smartcanopy-api
+    restart: always
+    ports:
+      - '26925:26925' # host:container
