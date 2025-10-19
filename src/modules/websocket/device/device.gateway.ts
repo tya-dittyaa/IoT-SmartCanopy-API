@@ -15,8 +15,8 @@ import { ISensorTelemetry } from './interfaces/ISensorTelemetry';
     origin: '*',
   },
 })
-export class WebsocketGateway {
-  private readonly logger = new Logger(WebsocketGateway.name);
+export class DeviceGateway {
+  private readonly logger = new Logger(DeviceGateway.name);
 
   @WebSocketServer()
   server: Server;
@@ -31,7 +31,7 @@ export class WebsocketGateway {
     return existing.id;
   }
 
-  @SubscribeMessage('devices/telemetry')
+  @SubscribeMessage('device/telemetry')
   async handleTelemetry(@MessageBody() data: SensorTelemetryDto) {
     const deviceKey = data?.deviceKey;
     const sensorData: ISensorTelemetry | undefined = (data as any)?.sensorData;
