@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { BadRequestException, Controller, Get, Query } from '@nestjs/common';
 import { TelemetryPointDto } from './dto/telemetry-point.dto';
 import { TelemetryQueryDto } from './dto/telemetry-query.dto';
 import { TelemetriesService } from './telemetries.service';
@@ -12,7 +12,12 @@ export class TelemetriesController {
     @Query() query: TelemetryQueryDto,
   ): Promise<TelemetryPointDto[]> {
     const deviceKey = query.deviceKey;
-    const minutes = query.minutes ? parseInt(query.minutes, 10) : undefined;
+    const rawMinutes = (query as unknown as Record<string, any>)['minutes'];
+    const minutes =
+      typeof rawMinutes === 'number' ? rawMinutes : Number(rawMinutes);
+    if (!Number.isFinite(minutes)) {
+      throw new BadRequestException('Minutes must be a number');
+    }
     return this.telemetriesService.getTemperatureSeries(deviceKey, minutes);
   }
 
@@ -21,7 +26,12 @@ export class TelemetriesController {
     @Query() query: TelemetryQueryDto,
   ): Promise<TelemetryPointDto[]> {
     const deviceKey = query.deviceKey;
-    const minutes = query.minutes ? parseInt(query.minutes, 10) : undefined;
+    const rawMinutes = (query as unknown as Record<string, any>)['minutes'];
+    const minutes =
+      typeof rawMinutes === 'number' ? rawMinutes : Number(rawMinutes);
+    if (!Number.isFinite(minutes)) {
+      throw new BadRequestException('Minutes must be a number');
+    }
     return this.telemetriesService.getHumiditySeries(deviceKey, minutes);
   }
 }

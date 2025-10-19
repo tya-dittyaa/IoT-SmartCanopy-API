@@ -9,9 +9,8 @@ export class TelemetriesService {
   private readonly CAP = 200;
   private readonly THRESHOLD_FACTOR = 20;
 
-  private ensureMinutesBound(minutes?: number) {
-    if (minutes === undefined || minutes === null) return 30;
-    if (minutes <= 0) return 30;
+  private ensureMinutesBound(minutes: number) {
+    if (!Number.isFinite(minutes) || minutes < 1) return 1;
     return Math.floor(minutes);
   }
 
@@ -160,7 +159,7 @@ export class TelemetriesService {
     return this.sampleTelemetryPoints(normalized, valueKey);
   }
 
-  async getTemperatureSeries(deviceKey: string, minutes?: number) {
+  async getTemperatureSeries(deviceKey: string, minutes: number) {
     if (!deviceKey) throw new BadRequestException('deviceKey is required');
 
     const bounded = this.ensureMinutesBound(minutes);
@@ -189,7 +188,7 @@ export class TelemetriesService {
     return this.fetchAndSample(deviceId, whereStart, 'temperature');
   }
 
-  async getHumiditySeries(deviceKey: string, minutes?: number) {
+  async getHumiditySeries(deviceKey: string, minutes: number) {
     if (!deviceKey) throw new BadRequestException('deviceKey is required');
 
     const bounded = this.ensureMinutesBound(minutes);

@@ -1,4 +1,4 @@
 export class TelemetryQueryDto {
   deviceKey: string;
-  minutes?: string;
+  minutes: number;
 }
