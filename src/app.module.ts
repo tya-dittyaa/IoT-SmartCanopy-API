@@ -3,7 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import appConfig from './core/config/app.config';
 import databaseConfig from './core/config/database.config';
 import { PrismaModule } from './core/modules/prisma/prisma.module';
-import { DeviceGateway } from './modules/websocket/device/device.gateway';
+import { DevicesGateway } from './modules/websocket/devices/devices.gateway';
 
 @Module({
   imports: [
@@ -13,7 +13,7 @@ import { DeviceGateway } from './modules/websocket/device/device.gateway';
       load: [appConfig, databaseConfig],
     }),
     PrismaModule,
-    DeviceGateway,
+    DevicesGateway,
   ],
   controllers: [],
   providers: [],
