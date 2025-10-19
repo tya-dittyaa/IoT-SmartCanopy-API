@@ -6,6 +6,9 @@ import { TelemetryPointDto } from './dto/telemetry-point.dto';
 export class TelemetryService {
   constructor(private readonly prismaService: PrismaService) {}
 
+  private readonly CAP = 200;
+  private readonly THRESHOLD_FACTOR = 20;
+
   private ensureMinutesBound(minutes?: number) {
     if (minutes === undefined || minutes === null) return 30;
     if (minutes <= 0) return 30;
@@ -34,50 +37,63 @@ export class TelemetryService {
     });
   }
 
-  async getTemperatureSeries(deviceKey: string, minutes?: number) {
-    if (!deviceKey) throw new BadRequestException('deviceKey is required');
+  private async runAggregation(
+    deviceId: string,
+    whereStart: Date,
+    valueKey: 'temperature' | 'humidity',
+  ): Promise<TelemetryPointDto[] | null> {
+    const cap = this.CAP;
+    const field = valueKey === 'temperature' ? 'temperature' : 'humidity';
 
-    const bounded = this.ensureMinutesBound(minutes);
-    const whereStart = new Date(Date.now() - bounded * 60 * 1000);
-    const deviceId = await this.findDeviceIdByKey(deviceKey);
-    if (!deviceId) {
-      return [];
-    }
-
-    const rows: Array<{ createdAt: Date; temperature: number }> =
-      await this.prismaService.telemetry.findMany({
-        where: {
-          deviceId,
-          createdAt: { gte: whereStart },
+    const pipeline = [
+      {
+        $match: {
+          deviceId: { $oid: deviceId },
+          createdAt: { $gte: whereStart },
         },
-        orderBy: { createdAt: 'asc' },
-        select: { createdAt: true, temperature: true },
-      });
-
-    return this.sampleTelemetryPoints(rows, 'temperature');
-  }
-
-  async getHumiditySeries(deviceKey: string, minutes?: number) {
-    if (!deviceKey) throw new BadRequestException('deviceKey is required');
-
-    const bounded = this.ensureMinutesBound(minutes);
-    const whereStart = new Date(Date.now() - bounded * 60 * 1000);
-    const deviceId = await this.findDeviceIdByKey(deviceKey);
-    if (!deviceId) {
-      return [];
-    }
-
-    const rows: Array<{ createdAt: Date; humidity: number }> =
-      await this.prismaService.telemetry.findMany({
-        where: {
-          deviceId,
-          createdAt: { gte: whereStart },
+      },
+      { $sort: { createdAt: 1 } },
+      {
+        $bucketAuto: {
+          groupBy: '$createdAt',
+          buckets: cap,
+          output: {
+            avgValue: { $avg: `$${field}` },
+            avgTime: { $avg: { $toLong: '$createdAt' } },
+          },
         },
-        orderBy: { createdAt: 'asc' },
-        select: { createdAt: true, humidity: true },
-      });
+      },
+    ];
 
-    return this.sampleTelemetryPoints(rows, 'humidity');
+    try {
+      const res = (await this.prismaService.$runCommandRaw({
+        aggregate: 'telemetries',
+        pipeline,
+        cursor: {},
+      })) as any;
+
+      const firstBatch = res?.cursor?.firstBatch ?? res;
+      if (!Array.isArray(firstBatch)) return null;
+
+      const points = firstBatch
+        .map((b: any) => {
+          const avgTime = b?.avgTime ?? null;
+          const avgValue = b?.avgValue ?? null;
+          if (avgTime == null || avgValue == null) return null;
+          const timeNum =
+            typeof avgTime === 'number' ? avgTime : Number(avgTime);
+          return new TelemetryPointDto(new Date(timeNum), Number(avgValue));
+        })
+        .filter(Boolean) as TelemetryPointDto[];
+
+      return points;
+    } catch (error) {
+      console.warn(
+        'DB aggregation failed, falling back to app sampling',
+        error,
+      );
+      return null;
+    }
   }
 
   private sampleTelemetryPoints(
@@ -117,5 +133,88 @@ export class TelemetryService {
     }
 
     return sampled;
+  }
+
+  private async fetchAndSample(
+    deviceId: string,
+    whereStart: Date,
+    valueKey: 'temperature' | 'humidity',
+  ): Promise<TelemetryPointDto[]> {
+    const select =
+      valueKey === 'temperature'
+        ? { createdAt: true, temperature: true }
+        : { createdAt: true, humidity: true };
+
+    const rows = await this.prismaService.telemetry.findMany({
+      where: { deviceId, createdAt: { gte: whereStart } },
+      orderBy: { createdAt: 'asc' },
+      select,
+    });
+
+    const normalized = rows as unknown as Array<{
+      createdAt: Date;
+      temperature?: number | null;
+      humidity?: number | null;
+    }>;
+
+    return this.sampleTelemetryPoints(normalized, valueKey);
+  }
+
+  async getTemperatureSeries(deviceKey: string, minutes?: number) {
+    if (!deviceKey) throw new BadRequestException('deviceKey is required');
+
+    const bounded = this.ensureMinutesBound(minutes);
+    const whereStart = new Date(Date.now() - bounded * 60 * 1000);
+    const deviceId = await this.findDeviceIdByKey(deviceKey);
+    if (!deviceId) {
+      return [];
+    }
+
+    const cap = this.CAP;
+    const threshold = cap * this.THRESHOLD_FACTOR;
+
+    const total = await this.prismaService.telemetry.count({
+      where: { deviceId, createdAt: { gte: whereStart } },
+    });
+
+    if (total > threshold) {
+      const points = await this.runAggregation(
+        deviceId,
+        whereStart,
+        'temperature',
+      );
+      if (points && points.length > 0) return points;
+    }
+
+    return this.fetchAndSample(deviceId, whereStart, 'temperature');
+  }
+
+  async getHumiditySeries(deviceKey: string, minutes?: number) {
+    if (!deviceKey) throw new BadRequestException('deviceKey is required');
+
+    const bounded = this.ensureMinutesBound(minutes);
+    const whereStart = new Date(Date.now() - bounded * 60 * 1000);
+    const deviceId = await this.findDeviceIdByKey(deviceKey);
+    if (!deviceId) {
+      return [];
+    }
+
+    const cap = this.CAP;
+    const threshold = cap * this.THRESHOLD_FACTOR;
+
+    const total = await this.prismaService.telemetry.count({
+      where: { deviceId, createdAt: { gte: whereStart } },
+    });
+
+    if (total > threshold) {
+      const points = await this.runAggregation(
+        deviceId,
+        whereStart,
+        'humidity',
+      );
+      if (points && points.length > 0) return points;
+    }
+
+    return this.fetchAndSample(deviceId, whereStart, 'humidity');
   }
 }
