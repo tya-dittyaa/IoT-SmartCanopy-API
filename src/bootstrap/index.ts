@@ -12,10 +12,17 @@ export async function bootstrap(): Promise<void> {
 
   const config = app.get(ConfigService);
   const port = config.get<number>('app.port') ?? 3000;
+  const corsOrigin = config.get<string | string[]>('app.corsOrigin') ?? '*';
+  app.enableCors({
+    origin: corsOrigin,
+  });
   const nodeEnv = process.env.NODE_ENV ?? 'development';
 
   await Promise.all([app.listen(port), app.startAllMicroservices()]);
 
   logger.log(`Application running in ${nodeEnv} mode`);
   logger.log(`HTTP Server listening on port ${port}`);
+  logger.log(
+    `CORS origin: ${Array.isArray(corsOrigin) ? corsOrigin.join(',') : corsOrigin}`,
+  );
 }
