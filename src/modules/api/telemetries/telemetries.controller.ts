@@ -1,11 +1,11 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { TelemetryPointDto } from './dto/telemetry-point.dto';
 import { TelemetryQueryDto } from './dto/telemetry-query.dto';
-import { TelemetryService } from './telemetry.service';
+import { TelemetriesService } from './telemetries.service';
 
-@Controller('telemetry')
-export class TelemetryController {
-  constructor(private readonly telemetryService: TelemetryService) {}
+@Controller('telemetries')
+export class TelemetriesController {
+  constructor(private readonly telemetriesService: TelemetriesService) {}
 
   @Get('temperature')
   async getTemperature(
@@ -13,7 +13,7 @@ export class TelemetryController {
   ): Promise<TelemetryPointDto[]> {
     const deviceKey = query.deviceKey;
     const minutes = query.minutes ? parseInt(query.minutes, 10) : undefined;
-    return this.telemetryService.getTemperatureSeries(deviceKey, minutes);
+    return this.telemetriesService.getTemperatureSeries(deviceKey, minutes);
   }
 
   @Get('humidity')
@@ -22,6 +22,6 @@ export class TelemetryController {
   ): Promise<TelemetryPointDto[]> {
     const deviceKey = query.deviceKey;
     const minutes = query.minutes ? parseInt(query.minutes, 10) : undefined;
-    return this.telemetryService.getHumiditySeries(deviceKey, minutes);
+    return this.telemetriesService.getHumiditySeries(deviceKey, minutes);
   }
 }

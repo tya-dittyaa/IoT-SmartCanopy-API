@@ -3,7 +3,7 @@ import { PrismaService } from 'src/core/modules/prisma/prisma.service';
 import { TelemetryPointDto } from './dto/telemetry-point.dto';
 
 @Injectable()
-export class TelemetryService {
+export class TelemetriesService {
   constructor(private readonly prismaService: PrismaService) {}
 
   private readonly CAP = 200;
