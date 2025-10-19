@@ -1,4 +1,4 @@
-export class SensorTelemetryDto {
+export interface ISensorTelemetry {
   humidity: number;
   temperature: number;
   rainStatus: 'DRY' | 'RAIN';

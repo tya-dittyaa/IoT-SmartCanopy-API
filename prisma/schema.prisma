@@ -22,24 +22,9 @@ model Device {
   updatedAt  DateTime @updatedAt
 
   // Relations
-  heartbeats  Heartbeat[]
   telemetries Telemetry[]
 
   @@map("devices")
-}
-
-model Heartbeat {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  deviceId  String   @db.ObjectId
-  timestamp BigInt
-  uptime    Int
-  rssi      Int
-  createdAt DateTime @default(now())
-
-  // Relations
-  device Device @relation(fields: [deviceId], references: [id])
-
-  @@map("heartbeats")
 }
 
 model Telemetry {

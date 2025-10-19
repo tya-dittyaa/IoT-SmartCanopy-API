@@ -4,11 +4,27 @@ import {
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import path from 'path';
+
+import type { PrismaClient as PrismaClientType } from '../../../../generated/prisma/client';
+
+const getPrismaClient = (): typeof PrismaClientType => {
+  const root = process.cwd();
+  const clientPath = path.join(root, 'generated', 'prisma', 'client');
+
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const required = require(clientPath);
+
+  return (required?.PrismaClient ??
+    required?.default ??
+    required) as typeof PrismaClientType;
+};
+
+const BasePrismaClient = getPrismaClient();
 
 @Injectable()
 export class PrismaService
-  extends PrismaClient
+  extends BasePrismaClient
   implements OnModuleInit, OnModuleDestroy
 {
   private readonly logger = new Logger(PrismaService.name);
