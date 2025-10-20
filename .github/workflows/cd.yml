@@ -15,6 +15,7 @@ jobs:
       PORT: ${{ secrets.PORT }}
       CORS_ORIGIN: ${{ secrets.CORS_ORIGIN }}
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      MQTT_URL: ${{ secrets.MQTT_URL }}
 
     steps:
       - name: Checkout Repository
@@ -31,6 +32,7 @@ jobs:
           PORT=${PORT}
           CORS_ORIGIN=${CORS_ORIGIN}
           DATABASE_URL=${DATABASE_URL}
+          MQTT_URL=${MQTT_URL}
           EOF
           echo ".env file ready"
 
