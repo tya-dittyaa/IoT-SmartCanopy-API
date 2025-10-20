@@ -6,7 +6,7 @@ import mqttConfig from './core/config/mqtt.config';
 import { PrismaModule } from './core/modules/prisma/prisma.module';
 import { DevicesModule } from './modules/api/devices/devices.module';
 import { TelemetriesModule } from './modules/api/telemetries/telemetries.module';
-import { DeviceModule } from './modules/websocket/devices/devices.module';
+import { MqttModule } from './modules/mqtt/mqtt.module';
 
 @Module({
   imports: [
@@ -16,9 +16,9 @@ import { DeviceModule } from './modules/websocket/devices/devices.module';
       load: [appConfig, databaseConfig, mqttConfig],
     }),
     PrismaModule,
-    DeviceModule,
     TelemetriesModule,
     DevicesModule,
+    MqttModule,
   ],
   controllers: [],
   providers: [],
