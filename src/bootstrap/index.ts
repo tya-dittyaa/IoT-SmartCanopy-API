@@ -1,4 +1,4 @@
-import { Logger } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../app.module';
@@ -19,6 +19,13 @@ export async function bootstrap(): Promise<void> {
   app.enableCors({
     origin: corsOrigin,
   });
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
   app.connectMicroservice(mqttOptions);
   app.enableShutdownHooks();
 
