@@ -10,6 +10,7 @@ jobs:
   deploy:
     runs-on: self-hosted
     environment: production
+
     env:
       SERVICE_NAME: smartcanopy-api
       PORT: ${{ secrets.PORT }}
@@ -27,7 +28,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          echo "Creating .env file..."
+          echo "Creating .env file from secrets..."
           cat << EOF > .env
           PORT=${PORT}
           CORS_ORIGIN=${CORS_ORIGIN}
@@ -42,7 +43,7 @@ jobs:
           echo "Stopping and removing existing containers..."
           docker compose down --remove-orphans
 
-      - name: Clean Docker Images (Pre-Build)
+      - name: Clean Dangling Images (Pre-Build)
         run: |
           set -euo pipefail
           echo "Pruning dangling images before build..."
@@ -52,7 +53,7 @@ jobs:
         run: |
           set -euo pipefail
           echo "Building services with docker compose..."
-          docker compose build
+          docker compose build --pull
 
       - name: Start Services
         run: |
@@ -60,22 +61,36 @@ jobs:
           echo "Starting services in detached mode..."
           docker compose up -d
 
-      - name: Verify Deployment
+      - name: Verify Deployment and Check Logs
         run: |
           set -euo pipefail
-          echo "Checking container status for $SERVICE_NAME..."
+          echo "Waiting 15s for services to initialize..."
+          sleep 15
+
+          echo "Checking container status for '$SERVICE_NAME'..."
           if ! docker ps | grep -q "$SERVICE_NAME"; then
-            echo "Error: No $SERVICE_NAME containers are running."
-            docker ps
+            echo "Error: '$SERVICE_NAME' container is not running."
+            echo "Dumping logs for potential crash..."
+            docker compose logs $SERVICE_NAME || echo "Could not fetch logs."
             exit 1
           fi
-          echo "Service $SERVICE_NAME is running successfully."
-          docker ps
+          echo "Service '$SERVICE_NAME' is running."
 
-      - name: Clean Docker Images (Post-Deploy)
+          echo "Checking logs for startup errors..."
+          if docker compose logs --tail="100" $SERVICE_NAME | grep -i -E "error|exception|failed|crash"; then
+            echo "Error detected in '$SERVICE_NAME' startup logs!"
+            echo "Dumping full logs:"
+            docker compose logs $SERVICE_NAME
+            exit 1
+          else
+            echo "No immediate errors found in logs. Deployment successful."
+            docker ps
+          fi
+
+      - name: Clean Dangling Images (Post-Deploy)
         run: |
           set -euo pipefail
-          echo "Pruning dangling images after deployment..."
+          echo "Pruning dangling images after successful deployment..."
           docker image prune -f
 
       - name: Deployment Complete
