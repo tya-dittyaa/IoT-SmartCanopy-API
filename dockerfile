@@ -22,4 +22,4 @@ ENV NODE_ENV=production
 EXPOSE 26925
 
 # Run the built application
-CMD ["node", "dist/src/main.js"]
+CMD ["npm", "run", "start:prod"]
