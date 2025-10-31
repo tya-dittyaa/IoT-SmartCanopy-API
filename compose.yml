@@ -4,4 +4,10 @@ services:
     container_name: smartcanopy-api
     restart: always
     ports:
-      - '26925:26925' # host:container
+      - '26925:26925'
+    networks:
+      - cf-net
+
+networks:
+  cf-net:
+    external: true

@@ -10,11 +10,22 @@ jobs:
   deploy:
     runs-on: self-hosted
     environment: production
+
     env:
       SERVICE_NAME: smartcanopy-api
       PORT: ${{ secrets.PORT }}
       CORS_ORIGIN: ${{ secrets.CORS_ORIGIN }}
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      MQTT_URL: ${{ secrets.MQTT_URL }}
+      SMTP_HOST: ${{ secrets.SMTP_HOST }}
+      SMTP_PORT: ${{ secrets.SMTP_PORT }}
+      SMTP_SECURE: ${{ secrets.SMTP_SECURE }}
+      SMTP_USER: ${{ secrets.SMTP_USER }}
+      SMTP_PASS: ${{ secrets.SMTP_PASS }}
+      MAIL_FROM: ${{ secrets.MAIL_FROM }}
+      MAIL_FROM_NAME: ${{ secrets.MAIL_FROM_NAME }}
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+      ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
 
     steps:
       - name: Checkout Repository
@@ -26,11 +37,21 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          echo "Creating .env file..."
+          echo "Creating .env file from secrets..."
           cat << EOF > .env
           PORT=${PORT}
           CORS_ORIGIN=${CORS_ORIGIN}
           DATABASE_URL=${DATABASE_URL}
+          MQTT_URL=${MQTT_URL}
+          SMTP_HOST=${SMTP_HOST}
+          SMTP_PORT=${SMTP_PORT}
+          SMTP_SECURE=${SMTP_SECURE}
+          SMTP_USER=${SMTP_USER}
+          SMTP_PASS=${SMTP_PASS}
+          MAIL_FROM=${MAIL_FROM}
+          MAIL_FROM_NAME=${MAIL_FROM_NAME}
+          DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
+          ALERT_EMAIL=${ALERT_EMAIL}
           EOF
           echo ".env file ready"
 
@@ -40,7 +61,7 @@ jobs:
           echo "Stopping and removing existing containers..."
           docker compose down --remove-orphans
 
-      - name: Clean Docker Images (Pre-Build)
+      - name: Clean Dangling Images (Pre-Build)
         run: |
           set -euo pipefail
           echo "Pruning dangling images before build..."
@@ -50,7 +71,7 @@ jobs:
         run: |
           set -euo pipefail
           echo "Building services with docker compose..."
-          docker compose build
+          docker compose build --pull
 
       - name: Start Services
         run: |
@@ -58,22 +79,36 @@ jobs:
           echo "Starting services in detached mode..."
           docker compose up -d
 
-      - name: Verify Deployment
+      - name: Verify Deployment and Check Logs
         run: |
           set -euo pipefail
-          echo "Checking container status for $SERVICE_NAME..."
+          echo "Waiting 15s for services to initialize..."
+          sleep 15
+
+          echo "Checking container status for '$SERVICE_NAME'..."
           if ! docker ps | grep -q "$SERVICE_NAME"; then
-            echo "Error: No $SERVICE_NAME containers are running."
-            docker ps
+            echo "Error: '$SERVICE_NAME' container is not running."
+            echo "Dumping logs for potential crash..."
+            docker compose logs $SERVICE_NAME || echo "Could not fetch logs."
             exit 1
           fi
-          echo "Service $SERVICE_NAME is running successfully."
-          docker ps
+          echo "Service '$SERVICE_NAME' is running."
 
-      - name: Clean Docker Images (Post-Deploy)
+          echo "Checking logs for startup errors..."
+          if docker compose logs --tail="100" $SERVICE_NAME | grep -i -E "error|exception|failed|crash"; then
+            echo "Error detected in '$SERVICE_NAME' startup logs!"
+            echo "Dumping full logs:"
+            docker compose logs $SERVICE_NAME
+            exit 1
+          else
+            echo "No immediate errors found in logs. Deployment successful."
+            docker ps
+          fi
+
+      - name: Clean Dangling Images (Post-Deploy)
         run: |
           set -euo pipefail
-          echo "Pruning dangling images after deployment..."
+          echo "Pruning dangling images after successful deployment..."
           docker image prune -f
 
       - name: Deployment Complete

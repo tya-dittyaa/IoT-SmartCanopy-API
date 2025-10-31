@@ -10,12 +10,12 @@ generator client {
 }
 
 datasource db {
-  provider = "mongodb"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 model Device {
-  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  id         String   @id @default(uuid()) @db.Uuid
   deviceKey  String   @unique
   deviceName String
   createdAt  DateTime @default(now())
@@ -28,14 +28,15 @@ model Device {
 }
 
 model Telemetry {
-  id          String      @id @default(auto()) @map("_id") @db.ObjectId
-  deviceId    String      @db.ObjectId
-  humidity    Float
-  temperature Float
-  rainStatus  RainStatus
-  servoStatus ServoStatus
-  mode        DeviceMode
-  createdAt   DateTime    @default(now())
+  id             String      @id @default(uuid()) @db.Uuid
+  deviceId       String      @db.Uuid
+  humidity       Float
+  temperature    Float
+  lightIntensity Int
+  rainStatus     RainStatus
+  servoStatus    ServoStatus
+  mode           DeviceMode
+  createdAt      DateTime    @default(now())
 
   // Relations
   device Device @relation(fields: [deviceId], references: [id])
