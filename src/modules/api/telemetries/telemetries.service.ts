@@ -177,6 +177,7 @@ export class TelemetriesService {
     light: TelemetryPointDto[];
     rain: TelemetryPointDto[];
     servo: TelemetryPointDto[];
+    mode: TelemetryPointDto[];
   }> {
     if (!deviceKey) throw new BadRequestException('deviceKey is required');
 
@@ -190,6 +191,7 @@ export class TelemetriesService {
         light: [],
         rain: [],
         servo: [],
+        mode: [],
       };
 
     const rows = await this.prismaService.telemetry.findMany({
@@ -202,6 +204,7 @@ export class TelemetriesService {
         lightIntensity: true,
         rainStatus: true,
         servoStatus: true,
+        mode: true,
       },
     });
 
@@ -214,13 +217,15 @@ export class TelemetriesService {
     const lightFn = (r: any) => r.lightIntensity ?? 0;
     const rainFn = (r: any) => (r.rainStatus === 'RAIN' ? 1 : 0);
     const servoFn = (r: any) => (r.servoStatus === 'OPEN' ? 1 : 0);
+    const modeFn = (r: any) => (r.mode === 'AUTO' ? 1 : 0);
 
     const temperature = this.samplePointsGeneric(normalized, tempFn);
     const humidity = this.samplePointsGeneric(normalized, humFn);
     const light = this.samplePointsGeneric(normalized, lightFn);
     const rain = this.samplePointsGeneric(normalized, rainFn);
     const servo = this.samplePointsGeneric(normalized, servoFn);
+    const mode = this.samplePointsGeneric(normalized, modeFn);
 
-    return { temperature, humidity, light, rain, servo };
+    return { temperature, humidity, light, rain, servo, mode };
   }
 }
