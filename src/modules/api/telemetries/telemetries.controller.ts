@@ -35,6 +35,15 @@ export class TelemetriesController {
     return this.telemetriesService.getHumiditySeries(deviceKey, minutes);
   }
 
+  @Get('light')
+  async getLight(
+    @Query() query: TelemetryQueryDto,
+  ): Promise<TelemetryPointDto[]> {
+    const deviceKey = query.deviceKey;
+    const minutes = this.parseMinutes(query);
+    return this.telemetriesService.getLightSeries(deviceKey, minutes);
+  }
+
   @Get('rain')
   async getRain(
     @Query() query: TelemetryQueryDto,
@@ -51,14 +60,5 @@ export class TelemetriesController {
     const deviceKey = query.deviceKey;
     const minutes = this.parseMinutes(query);
     return this.telemetriesService.getServoSeries(deviceKey, minutes);
-  }
-
-  @Get('light')
-  async getLight(
-    @Query() query: TelemetryQueryDto,
-  ): Promise<TelemetryPointDto[]> {
-    const deviceKey = query.deviceKey;
-    const minutes = this.parseMinutes(query);
-    return this.telemetriesService.getLightSeries(deviceKey, minutes);
   }
 }
