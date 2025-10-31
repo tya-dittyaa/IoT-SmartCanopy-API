@@ -1,7 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { DiscordService } from 'src/core/modules/discord/discord.service';
 import { NodemailerService } from 'src/core/modules/nodemailer/nodemailer.service';
 import { PrismaService } from 'src/core/modules/prisma/prisma.service';
 import { SensorTelemetryDto } from './dto/sensor-telemetry.dto';
+
+type TelemetryRecord = SensorTelemetryDto & {
+  id: string;
+  createdAt: Date | string;
+};
 
 @Injectable()
 export class MqttService {
@@ -10,6 +16,7 @@ export class MqttService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly nodemailerService: NodemailerService,
+    private readonly discordService: DiscordService,
   ) {}
 
   async getDeviceIdByKey(deviceKey: string): Promise<string | null> {
@@ -48,11 +55,12 @@ export class MqttService {
 
   public async notifyTelemetryChange(deviceId: string): Promise<void> {
     try {
-      const lastTwo = await this.prismaService.telemetry.findMany({
-        where: { deviceId },
-        orderBy: { createdAt: 'desc' },
-        take: 2,
-      });
+      const lastTwo: TelemetryRecord[] =
+        await this.prismaService.telemetry.findMany({
+          where: { deviceId },
+          orderBy: { createdAt: 'desc' },
+          take: 2,
+        });
 
       // nothing to compare
       if (lastTwo.length < 2) return;
@@ -116,6 +124,20 @@ export class MqttService {
       } catch (err) {
         this.logger.error('Failed to send alert email', err as Error);
       }
+
+      try {
+        const discordPayload = this.composeAlertWebhook({
+          deviceLabel,
+          newest,
+          previous,
+          rainChanged,
+          servoChanged,
+        });
+        await this.discordService.sendWebhook(discordPayload);
+        this.logger.log(`Discord webhook sent for device ${deviceId}`);
+      } catch (err) {
+        this.logger.error('Failed to send Discord webhook', err as Error);
+      }
     } catch (err) {
       this.logger.error(
         'Error comparing last two telemetry entries',
@@ -126,8 +148,8 @@ export class MqttService {
 
   private composeAlertEmail(params: {
     deviceLabel: string;
-    newest: any;
-    previous: any;
+    newest: TelemetryRecord;
+    previous: TelemetryRecord;
     rainChanged: boolean;
     servoChanged: boolean;
   }): { subject: string; html: string } {
@@ -171,5 +193,63 @@ export class MqttService {
     `;
 
     return { subject, html };
+  }
+
+  private composeAlertWebhook(params: {
+    deviceLabel: string;
+    newest: TelemetryRecord;
+    previous: TelemetryRecord;
+    rainChanged: boolean;
+    servoChanged: boolean;
+  }): Record<string, any> {
+    const { deviceLabel, newest, previous, rainChanged, servoChanged } = params;
+
+    const time =
+      newest.createdAt instanceof Date
+        ? newest.createdAt.toISOString()
+        : String(newest.createdAt ?? new Date().toISOString());
+
+    const changes: string[] = [];
+    if (rainChanged)
+      changes.push(`Rain: ${previous.rainStatus} → ${newest.rainStatus}`);
+    if (servoChanged)
+      changes.push(`Servo: ${previous.servoStatus} → ${newest.servoStatus}`);
+
+    const color = rainChanged || servoChanged ? 0xffaa00 : 0x2ecc71;
+
+    const fields = [
+      { name: 'Device', value: deviceLabel, inline: true },
+      { name: 'Time', value: time, inline: true },
+      { name: 'Mode', value: String(newest.mode ?? '-'), inline: true },
+      {
+        name: 'Temperature',
+        value: String(newest.temperature ?? '-'),
+        inline: true,
+      },
+      { name: 'Humidity', value: String(newest.humidity ?? '-'), inline: true },
+      { name: 'Rain', value: String(newest.rainStatus ?? '-'), inline: true },
+      { name: 'Servo', value: String(newest.servoStatus ?? '-'), inline: true },
+    ];
+
+    if (changes.length > 0) {
+      fields.unshift({
+        name: 'Changes',
+        value: changes.join('\n'),
+        inline: false,
+      });
+    }
+
+    const embed = {
+      title: 'Smart Canopy — Alert',
+      color,
+      fields,
+      footer: { text: 'Automated notification from Smart Canopy' },
+      timestamp: new Date(time).toISOString(),
+    };
+
+    return {
+      username: 'Smart Canopy',
+      embeds: [embed],
+    };
   }
 }
