@@ -3,6 +3,7 @@ services:
     build: .
     container_name: smartcanopy-api
     restart: always
+    env_file: .env
     ports:
       - '26925:26925'
     networks:
