@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import appConfig from './core/config/app.config';
 import databaseConfig from './core/config/database.config';
 import mqttConfig from './core/config/mqtt.config';
+import { NodemailerModule } from './core/modules/nodemailer/nodemailer.module';
 import { PrismaModule } from './core/modules/prisma/prisma.module';
 import { DevicesModule } from './modules/api/devices/devices.module';
 import { TelemetriesModule } from './modules/api/telemetries/telemetries.module';
@@ -19,6 +20,7 @@ import { MqttModule } from './modules/mqtt/mqtt.module';
     TelemetriesModule,
     DevicesModule,
     MqttModule,
+    NodemailerModule,
   ],
   controllers: [],
   providers: [],
