@@ -28,5 +28,6 @@ export class MqttController {
     if (!deviceId) return { status: 'error', message: 'Device not found' };
 
     await this.mqttService.saveTelemetry(deviceId, data);
+    await this.mqttService.notifyTelemetryChange(deviceId);
   }
 }
