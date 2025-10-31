@@ -167,4 +167,60 @@ export class TelemetriesService {
       (r) => (r.servoStatus === 'OPEN' ? 1 : 0),
     );
   }
+
+  async getAllSeries(
+    deviceKey: string,
+    minutes: number,
+  ): Promise<{
+    temperature: TelemetryPointDto[];
+    humidity: TelemetryPointDto[];
+    light: TelemetryPointDto[];
+    rain: TelemetryPointDto[];
+    servo: TelemetryPointDto[];
+  }> {
+    if (!deviceKey) throw new BadRequestException('deviceKey is required');
+
+    const bounded = this.ensureMinutesBound(minutes);
+    const whereStart = new Date(Date.now() - bounded * 60 * 1000);
+    const deviceId = await this.findDeviceIdByKey(deviceKey);
+    if (!deviceId)
+      return {
+        temperature: [],
+        humidity: [],
+        light: [],
+        rain: [],
+        servo: [],
+      };
+
+    const rows = await this.prismaService.telemetry.findMany({
+      where: { deviceId, createdAt: { gte: whereStart } },
+      orderBy: { createdAt: 'asc' },
+      select: {
+        createdAt: true,
+        temperature: true,
+        humidity: true,
+        lightIntensity: true,
+        rainStatus: true,
+        servoStatus: true,
+      },
+    });
+
+    const normalized = rows as unknown as Array<
+      { createdAt: Date } & Record<string, any>
+    >;
+
+    const tempFn = (r: any) => r.temperature ?? 0;
+    const humFn = (r: any) => r.humidity ?? 0;
+    const lightFn = (r: any) => r.lightIntensity ?? 0;
+    const rainFn = (r: any) => (r.rainStatus === 'RAIN' ? 1 : 0);
+    const servoFn = (r: any) => (r.servoStatus === 'OPEN' ? 1 : 0);
+
+    const temperature = this.samplePointsGeneric(normalized, tempFn);
+    const humidity = this.samplePointsGeneric(normalized, humFn);
+    const light = this.samplePointsGeneric(normalized, lightFn);
+    const rain = this.samplePointsGeneric(normalized, rainFn);
+    const servo = this.samplePointsGeneric(normalized, servoFn);
+
+    return { temperature, humidity, light, rain, servo };
+  }
 }
