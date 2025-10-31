@@ -9,6 +9,10 @@ export class SensorTelemetryDto {
   @IsNotEmpty()
   temperature: number;
 
+  @IsNumber()
+  @IsNotEmpty()
+  lightIntensity: number;
+
   @IsEnum(['DRY', 'RAIN'])
   @IsNotEmpty()
   rainStatus: 'DRY' | 'RAIN';

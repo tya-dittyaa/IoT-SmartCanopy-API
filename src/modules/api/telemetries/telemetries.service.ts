@@ -151,4 +151,20 @@ export class TelemetriesService {
       (r) => (r.servoStatus === 'OPEN' ? 1 : 0),
     );
   }
+
+  async getLightSeries(deviceKey: string, minutes: number) {
+    if (!deviceKey) throw new BadRequestException('deviceKey is required');
+
+    const bounded = this.ensureMinutesBound(minutes);
+    const whereStart = new Date(Date.now() - bounded * 60 * 1000);
+    const deviceId = await this.findDeviceIdByKey(deviceKey);
+    if (!deviceId) return [];
+
+    return this.fetchAndSampleGeneric(
+      deviceId,
+      whereStart,
+      { createdAt: true, lightIntensity: true },
+      (r) => r.lightIntensity ?? 0,
+    );
+  }
 }

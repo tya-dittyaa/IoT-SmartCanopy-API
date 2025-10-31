@@ -37,6 +37,7 @@ export class MqttService {
           deviceId: deviceId,
           humidity: data.humidity,
           temperature: data.temperature,
+          lightIntensity: data.lightIntensity,
           rainStatus: data.rainStatus,
           servoStatus: data.servoStatus,
           mode: data.mode,
@@ -183,6 +184,7 @@ export class MqttService {
           <table cellpadding="6" cellspacing="0" style="border-collapse: collapse;">
             <tr><td style="border:1px solid #ddd;"><strong>Temperature</strong></td><td style="border:1px solid #ddd;">${newest.temperature}</td></tr>
             <tr><td style="border:1px solid #ddd;"><strong>Humidity</strong></td><td style="border:1px solid #ddd;">${newest.humidity}</td></tr>
+            <tr><td style="border:1px solid #ddd;"><strong>Light Intensity</strong></td><td style="border:1px solid #ddd;">${newest.lightIntensity ?? '-'}</td></tr>
             <tr><td style="border:1px solid #ddd;"><strong>Mode</strong></td><td style="border:1px solid #ddd;">${newest.mode}</td></tr>
             <tr><td style="border:1px solid #ddd;"><strong>Rain Status</strong></td><td style="border:1px solid #ddd;">${newest.rainStatus}</td></tr>
             <tr><td style="border:1px solid #ddd;"><strong>Servo Status</strong></td><td style="border:1px solid #ddd;">${newest.servoStatus}</td></tr>
@@ -227,8 +229,21 @@ export class MqttService {
         inline: true,
       },
       { name: 'Humidity', value: String(newest.humidity ?? '-'), inline: true },
-      { name: 'Rain', value: String(newest.rainStatus ?? '-'), inline: true },
-      { name: 'Servo', value: String(newest.servoStatus ?? '-'), inline: true },
+      {
+        name: 'Light Intensity',
+        value: String(newest.lightIntensity ?? '-'),
+        inline: true,
+      },
+      {
+        name: 'Rain Status',
+        value: String(newest.rainStatus ?? '-'),
+        inline: true,
+      },
+      {
+        name: 'Servo Status',
+        value: String(newest.servoStatus ?? '-'),
+        inline: true,
+      },
     ];
 
     if (changes.length > 0) {

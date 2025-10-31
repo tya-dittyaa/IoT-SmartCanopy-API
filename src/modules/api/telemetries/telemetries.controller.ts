@@ -52,4 +52,13 @@ export class TelemetriesController {
     const minutes = this.parseMinutes(query);
     return this.telemetriesService.getServoSeries(deviceKey, minutes);
   }
+
+  @Get('light')
+  async getLight(
+    @Query() query: TelemetryQueryDto,
+  ): Promise<TelemetryPointDto[]> {
+    const deviceKey = query.deviceKey;
+    const minutes = this.parseMinutes(query);
+    return this.telemetriesService.getLightSeries(deviceKey, minutes);
+  }
 }
