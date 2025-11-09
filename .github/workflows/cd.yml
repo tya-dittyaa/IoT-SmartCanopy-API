@@ -17,6 +17,8 @@ jobs:
       CORS_ORIGIN: ${{ secrets.CORS_ORIGIN }}
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       MQTT_URL: ${{ secrets.MQTT_URL }}
+      MQTT_USER: ${{ secrets.MQTT_USER }}
+      MQTT_PASS: ${{ secrets.MQTT_PASS }}
       SMTP_HOST: ${{ secrets.SMTP_HOST }}
       SMTP_PORT: ${{ secrets.SMTP_PORT }}
       SMTP_SECURE: ${{ secrets.SMTP_SECURE }}
@@ -43,6 +45,8 @@ jobs:
           CORS_ORIGIN=${CORS_ORIGIN}
           DATABASE_URL=${DATABASE_URL}
           MQTT_URL=${MQTT_URL}
+          MQTT_USER=${MQTT_USER}
+          MQTT_PASS=${MQTT_PASS}
           SMTP_HOST=${SMTP_HOST}
           SMTP_PORT=${SMTP_PORT}
           SMTP_SECURE=${SMTP_SECURE}
